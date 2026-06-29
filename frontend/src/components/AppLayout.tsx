@@ -16,6 +16,7 @@ import { useDisclosure } from '@mantine/hooks';
 import {
   IconBox,
   IconCloud,
+  IconDeviceDesktop,
   IconFolders,
   IconLayoutDashboard,
   IconLogout,
@@ -32,6 +33,7 @@ const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', icon: IconLayoutDashboard, end: true },
   { to: '/connections', label: 'Prism Central', icon: IconPlugConnected },
   { to: '/projects', label: 'Projects', icon: IconFolders },
+  { to: '/vms', label: 'Virtual Machines', icon: IconDeviceDesktop },
   { to: '/files', label: 'Files', icon: IconServer2 },
   { to: '/objects', label: 'Objects', icon: IconBox },
 ];

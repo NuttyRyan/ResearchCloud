@@ -14,17 +14,21 @@ import {
 import { useForm } from '@mantine/form';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
-import { IconServerBolt } from '@tabler/icons-react';
+import { IconFolderShare, IconServerBolt } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 import { api, ApiError } from '../api/client';
 import { NoConnection } from '../components/NoConnection';
+import { SharesDrawer } from '../components/SharesDrawer';
 import { StateBadge } from '../components/StateBadge';
+import type { FileServer } from '../api/types';
 import { useActiveConnection } from '../state/ConnectionContext';
 
 export function FilesPage() {
   const { activeId } = useActiveConnection();
   const queryClient = useQueryClient();
   const [opened, { open, close }] = useDisclosure(false);
+  const [sharesFor, setSharesFor] = useState<FileServer | null>(null);
 
   const { data: servers, isLoading } = useQuery({
     queryKey: ['files', activeId],
@@ -85,6 +89,7 @@ export function FilesPage() {
               <Table.Th>Size (GiB)</Table.Th>
               <Table.Th>Version</Table.Th>
               <Table.Th>State</Table.Th>
+              <Table.Th ta="right">Actions</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -99,11 +104,23 @@ export function FilesPage() {
                 <Table.Td>
                   <StateBadge state={s.state} />
                 </Table.Td>
+                <Table.Td>
+                  <Group justify="flex-end">
+                    <Button
+                      size="xs"
+                      variant="light"
+                      leftSection={<IconFolderShare size={14} />}
+                      onClick={() => setSharesFor(s)}
+                    >
+                      Shares
+                    </Button>
+                  </Group>
+                </Table.Td>
               </Table.Tr>
             ))}
             {!isLoading && (servers?.length ?? 0) === 0 && (
               <Table.Tr>
-                <Table.Td colSpan={5}>
+                <Table.Td colSpan={6}>
                   <Text c="dimmed" ta="center" py="md">
                     No file servers yet.
                   </Text>
@@ -142,6 +159,14 @@ export function FilesPage() {
           </Stack>
         </form>
       </Modal>
+
+      {activeId && (
+        <SharesDrawer
+          connectionId={activeId}
+          fileServer={sharesFor}
+          onClose={() => setSharesFor(null)}
+        />
+      )}
     </Stack>
   );
 }

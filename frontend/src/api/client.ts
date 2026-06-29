@@ -1,4 +1,5 @@
 import type {
+  Bucket,
   Cluster,
   Connection,
   ConnectionCreate,
@@ -6,7 +7,11 @@ import type {
   FileServer,
   ObjectStore,
   Project,
+  Share,
+  SharePermission,
   UserOut,
+  Vm,
+  VmPowerActionType,
 } from './types';
 
 const TOKEN_KEY = 'rc_token';
@@ -111,4 +116,60 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
+
+  listShares: (cid: number, fsExtId: string) =>
+    request<Share[]>(`/connections/${cid}/files/${fsExtId}/shares`),
+  createShare: (
+    cid: number,
+    fsExtId: string,
+    payload: {
+      name: string;
+      protocol: 'SMB' | 'NFS';
+      size_gib: number;
+      permissions: SharePermission[];
+    },
+  ) =>
+    request<Share>(`/connections/${cid}/files/${fsExtId}/shares`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  listBuckets: (cid: number, osExtId: string) =>
+    request<Bucket[]>(`/connections/${cid}/objects/${osExtId}/buckets`),
+  createBucket: (
+    cid: number,
+    osExtId: string,
+    payload: { name: string; versioning: boolean; size_gib: number },
+  ) =>
+    request<Bucket>(`/connections/${cid}/objects/${osExtId}/buckets`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  listVms: (cid: number, projectExtId?: string) => {
+    const qs = projectExtId ? `?project=${encodeURIComponent(projectExtId)}` : '';
+    return request<Vm[]>(`/connections/${cid}/vms${qs}`);
+  },
+  createVm: (
+    cid: number,
+    payload: {
+      name: string;
+      project_ext_id: string;
+      cluster_ext_id: string;
+      num_vcpus: number;
+      memory_gib: number;
+      os: string;
+    },
+  ) =>
+    request<Vm>(`/connections/${cid}/vms`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  setVmPower: (cid: number, vmExtId: string, action: VmPowerActionType) =>
+    request<Vm>(`/connections/${cid}/vms/${vmExtId}/power`, {
+      method: 'POST',
+      body: JSON.stringify({ action }),
+    }),
+  deleteVm: (cid: number, vmExtId: string) =>
+    request<void>(`/connections/${cid}/vms/${vmExtId}`, { method: 'DELETE' }),
 };

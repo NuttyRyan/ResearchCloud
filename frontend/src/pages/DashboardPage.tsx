@@ -14,6 +14,7 @@ import {
   IconBuildingBank,
   IconCircleCheck,
   IconCircleDashed,
+  IconDeviceDesktop,
   IconFolders,
   IconServer2,
 } from '@tabler/icons-react';
@@ -53,18 +54,18 @@ function StatCard({
 const DELIVERED = [
   'Prism Central connection management',
   'Projects (create & manage)',
-  'Deploy Nutanix Files',
-  'Deploy Nutanix Objects',
+  'Deploy Nutanix Files & Objects',
+  'File shares (with permissions) & object buckets',
+  'VM management: create, power on/off/restart, delete',
 ];
 
 const ROADMAP = [
-  'File shares with permissions & buckets in object stores',
   'Self-Service blueprint builder & runbooks (Calm DSL)',
   'VNC console for project VMs',
   'Active Directory user & group management',
   'Flow microsegmentation management',
   'Admin & end-user (self-service) access modes',
-  'VM & workspace management (Ronin-style)',
+  'Smart scheduling & idle auto-stop for VMs',
   'Cost management & governance (NCM Cost Governance)',
 ];
 
@@ -91,6 +92,11 @@ export function DashboardPage() {
     queryFn: () => api.listObjectStores(activeId!),
     enabled: !!activeId,
   });
+  const vms = useQuery({
+    queryKey: ['vms', activeId, null],
+    queryFn: () => api.listVms(activeId!),
+    enabled: !!activeId,
+  });
 
   return (
     <Stack>
@@ -104,9 +110,10 @@ export function DashboardPage() {
       {!activeId ? (
         <NoConnection />
       ) : (
-        <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
+        <SimpleGrid cols={{ base: 1, sm: 2, lg: 5 }}>
           <StatCard label="Clusters" value={clusters.data?.length ?? '-'} icon={IconBuildingBank} />
           <StatCard label="Projects" value={projects.data?.length ?? '-'} icon={IconFolders} />
+          <StatCard label="VMs" value={vms.data?.length ?? '-'} icon={IconDeviceDesktop} />
           <StatCard label="File servers" value={files.data?.length ?? '-'} icon={IconServer2} />
           <StatCard label="Object stores" value={objects.data?.length ?? '-'} icon={IconBox} />
         </SimpleGrid>

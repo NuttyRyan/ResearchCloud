@@ -66,3 +66,48 @@ export interface ObjectStore {
   state: string;
   endpoint: string;
 }
+
+export type ShareAccess = 'READ_ONLY' | 'READ_WRITE' | 'NO_ACCESS';
+
+export interface SharePermission {
+  principal: string;
+  access: ShareAccess;
+}
+
+export interface Share {
+  ext_id: string;
+  name: string;
+  file_server_ext_id: string;
+  file_server_name: string;
+  protocol: 'SMB' | 'NFS';
+  size_gib: number;
+  state: string;
+  permissions: SharePermission[];
+}
+
+export interface Bucket {
+  ext_id: string;
+  name: string;
+  object_store_ext_id: string;
+  object_store_name: string;
+  versioning: boolean;
+  size_gib: number;
+  state: string;
+}
+
+export type VmPowerState = 'ON' | 'OFF';
+export type VmPowerActionType = 'ON' | 'OFF' | 'RESTART';
+
+export interface Vm {
+  ext_id: string;
+  name: string;
+  project_ext_id: string;
+  project_name: string;
+  cluster_ext_id: string;
+  cluster_name: string;
+  num_vcpus: number;
+  memory_gib: number;
+  os: string;
+  power_state: VmPowerState;
+  ip_address: string | null;
+}

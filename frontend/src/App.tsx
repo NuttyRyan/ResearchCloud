@@ -9,6 +9,7 @@ import { FilesPage } from './pages/FilesPage';
 import { LoginPage } from './pages/LoginPage';
 import { ObjectsPage } from './pages/ObjectsPage';
 import { ProjectsPage } from './pages/ProjectsPage';
+import { VmsPage } from './pages/VmsPage';
 
 export default function App() {
   const { user, loading } = useAuth();
@@ -36,6 +37,7 @@ export default function App() {
           <Route path="/" element={<DashboardPage />} />
           <Route path="/connections" element={<ConnectionsPage />} />
           <Route path="/projects" element={<ProjectsPage />} />
+          <Route path="/vms" element={<VmsPage />} />
           <Route path="/files" element={<FilesPage />} />
           <Route path="/objects" element={<ObjectsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />

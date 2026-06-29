@@ -15,17 +15,21 @@ import {
 import { useForm } from '@mantine/form';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
-import { IconBox } from '@tabler/icons-react';
+import { IconBox, IconBucket } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 import { api, ApiError } from '../api/client';
+import { BucketsDrawer } from '../components/BucketsDrawer';
 import { NoConnection } from '../components/NoConnection';
 import { StateBadge } from '../components/StateBadge';
+import type { ObjectStore } from '../api/types';
 import { useActiveConnection } from '../state/ConnectionContext';
 
 export function ObjectsPage() {
   const { activeId } = useActiveConnection();
   const queryClient = useQueryClient();
   const [opened, { open, close }] = useDisclosure(false);
+  const [bucketsFor, setBucketsFor] = useState<ObjectStore | null>(null);
 
   const { data: stores, isLoading } = useQuery({
     queryKey: ['objects', activeId],
@@ -86,6 +90,7 @@ export function ObjectsPage() {
               <Table.Th>Capacity (GiB)</Table.Th>
               <Table.Th>Endpoint</Table.Th>
               <Table.Th>State</Table.Th>
+              <Table.Th ta="right">Actions</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -102,11 +107,23 @@ export function ObjectsPage() {
                 <Table.Td>
                   <StateBadge state={s.state} />
                 </Table.Td>
+                <Table.Td>
+                  <Group justify="flex-end">
+                    <Button
+                      size="xs"
+                      variant="light"
+                      leftSection={<IconBucket size={14} />}
+                      onClick={() => setBucketsFor(s)}
+                    >
+                      Buckets
+                    </Button>
+                  </Group>
+                </Table.Td>
               </Table.Tr>
             ))}
             {!isLoading && (stores?.length ?? 0) === 0 && (
               <Table.Tr>
-                <Table.Td colSpan={5}>
+                <Table.Td colSpan={6}>
                   <Text c="dimmed" ta="center" py="md">
                     No object stores yet.
                   </Text>
@@ -145,6 +162,14 @@ export function ObjectsPage() {
           </Stack>
         </form>
       </Modal>
+
+      {activeId && (
+        <BucketsDrawer
+          connectionId={activeId}
+          objectStore={bucketsFor}
+          onClose={() => setBucketsFor(null)}
+        />
+      )}
     </Stack>
   );
 }

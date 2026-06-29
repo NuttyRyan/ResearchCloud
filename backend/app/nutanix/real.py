@@ -6,6 +6,8 @@ import httpx
 
 from app.nutanix.base import NutanixClient, NutanixError
 from app.schemas.nutanix import (
+    Bucket,
+    BucketCreate,
     Cluster,
     FileServer,
     FileServerCreate,
@@ -13,6 +15,11 @@ from app.schemas.nutanix import (
     ObjectStoreCreate,
     Project,
     ProjectCreate,
+    Share,
+    ShareCreate,
+    Vm,
+    VmCreate,
+    VmPowerActionType,
 )
 
 
@@ -57,14 +64,22 @@ class RealNutanixClient(NutanixClient):
         except httpx.HTTPError as exc:  # noqa: B904
             raise NutanixError(f"GET {path} failed: {exc}") from exc
 
-    def _post(self, path: str, json: dict[str, Any]) -> dict[str, Any]:
+    def _post(self, path: str, json: dict[str, Any] | None = None) -> dict[str, Any]:
         try:
             with self._client() as client:
-                resp = client.post(path, json=json)
+                resp = client.post(path, json=json or {})
                 resp.raise_for_status()
-                return resp.json()
+                return resp.json() if resp.content else {}
         except httpx.HTTPError as exc:  # noqa: B904
             raise NutanixError(f"POST {path} failed: {exc}") from exc
+
+    def _delete(self, path: str) -> None:
+        try:
+            with self._client() as client:
+                resp = client.delete(path)
+                resp.raise_for_status()
+        except httpx.HTTPError as exc:  # noqa: B904
+            raise NutanixError(f"DELETE {path} failed: {exc}") from exc
 
     def test_connection(self) -> tuple[str, int]:
         clusters = self.list_clusters()
@@ -201,3 +216,169 @@ class RealNutanixClient(NutanixClient):
             state=item.get("state", "DEPLOYING"),
             endpoint=item.get("ipAddress", ""),
         )
+
+    def list_shares(self, file_server_ext_id: str) -> list[Share]:
+        data = self._get(
+            f"/api/files/v4.0/config/file-servers/{file_server_ext_id}/shares"
+        )
+        shares: list[Share] = []
+        for item in data.get("data", []) or []:
+            shares.append(
+                Share(
+                    ext_id=item.get("extId", ""),
+                    name=item.get("name", ""),
+                    file_server_ext_id=file_server_ext_id,
+                    file_server_name=item.get("fileServerName", ""),
+                    protocol=item.get("protocol", "SMB"),
+                    size_gib=int(item.get("maxSizeGib", 0)),
+                    state=item.get("state", "UNKNOWN"),
+                    permissions=[],
+                )
+            )
+        return shares
+
+    def create_share(self, file_server_ext_id: str, payload: ShareCreate) -> Share:
+        body = {
+            "name": payload.name,
+            "protocol": payload.protocol,
+            "maxSizeGib": payload.size_gib,
+        }
+        data = self._post(
+            f"/api/files/v4.0/config/file-servers/{file_server_ext_id}/shares", body
+        )
+        item = data.get("data", body)
+        return Share(
+            ext_id=item.get("extId", ""),
+            name=item.get("name", payload.name),
+            file_server_ext_id=file_server_ext_id,
+            file_server_name=item.get("fileServerName", ""),
+            protocol=payload.protocol,
+            size_gib=payload.size_gib,
+            state=item.get("state", "AVAILABLE"),
+            permissions=payload.permissions,
+        )
+
+    def list_buckets(self, object_store_ext_id: str) -> list[Bucket]:
+        data = self._get(
+            f"/api/objects/v4.0/config/object-stores/{object_store_ext_id}/buckets"
+        )
+        buckets: list[Bucket] = []
+        for item in data.get("data", []) or []:
+            buckets.append(
+                Bucket(
+                    ext_id=item.get("extId", ""),
+                    name=item.get("name", ""),
+                    object_store_ext_id=object_store_ext_id,
+                    object_store_name=item.get("objectStoreName", ""),
+                    versioning=bool(item.get("versioningEnabled", False)),
+                    size_gib=int(item.get("maxSizeGib", 0)),
+                    state=item.get("state", "UNKNOWN"),
+                )
+            )
+        return buckets
+
+    def create_bucket(self, object_store_ext_id: str, payload: BucketCreate) -> Bucket:
+        body = {
+            "name": payload.name,
+            "versioningEnabled": payload.versioning,
+            "maxSizeGib": payload.size_gib,
+        }
+        data = self._post(
+            f"/api/objects/v4.0/config/object-stores/{object_store_ext_id}/buckets", body
+        )
+        item = data.get("data", body)
+        return Bucket(
+            ext_id=item.get("extId", ""),
+            name=item.get("name", payload.name),
+            object_store_ext_id=object_store_ext_id,
+            object_store_name=item.get("objectStoreName", ""),
+            versioning=payload.versioning,
+            size_gib=payload.size_gib,
+            state=item.get("state", "COMPLETE"),
+        )
+
+    def list_vms(self, project_ext_id: str | None = None) -> list[Vm]:
+        params: dict[str, Any] = {}
+        if project_ext_id:
+            params["$filter"] = f"project/extId eq '{project_ext_id}'"
+        data = self._get("/api/vmm/v4.0/ahv/config/vms", params=params)
+        vms: list[Vm] = []
+        for item in data.get("data", []) or []:
+            cluster = item.get("cluster", {}) or {}
+            project = item.get("project", {}) or {}
+            nics = item.get("nics", []) or []
+            ip = None
+            if nics:
+                ipinfo = (nics[0].get("networkInfo", {}) or {}).get("ipv4Config", {}) or {}
+                ip = (ipinfo.get("ipAddress", {}) or {}).get("value")
+            vms.append(
+                Vm(
+                    ext_id=item.get("extId", ""),
+                    name=item.get("name", ""),
+                    project_ext_id=project.get("extId", ""),
+                    project_name=project.get("name", ""),
+                    cluster_ext_id=cluster.get("extId", ""),
+                    cluster_name=cluster.get("name", ""),
+                    num_vcpus=int(item.get("numSockets", 1))
+                    * int(item.get("numCoresPerSocket", 1)),
+                    memory_gib=int(item.get("memorySizeBytes", 0)) // (1024**3),
+                    os=item.get("guestOs", "unknown"),
+                    power_state="ON" if item.get("powerState") == "ON" else "OFF",
+                    ip_address=ip,
+                )
+            )
+        return vms
+
+    def create_vm(self, payload: VmCreate) -> Vm:
+        body = {
+            "name": payload.name,
+            "numSockets": payload.num_vcpus,
+            "numCoresPerSocket": 1,
+            "memorySizeBytes": payload.memory_gib * (1024**3),
+            "cluster": {"extId": payload.cluster_ext_id},
+            "project": {"extId": payload.project_ext_id},
+        }
+        data = self._post("/api/vmm/v4.0/ahv/config/vms", body)
+        item = data.get("data", body)
+        return Vm(
+            ext_id=item.get("extId", ""),
+            name=payload.name,
+            project_ext_id=payload.project_ext_id,
+            project_name=item.get("project", {}).get("name", ""),
+            cluster_ext_id=payload.cluster_ext_id,
+            cluster_name=item.get("cluster", {}).get("name", ""),
+            num_vcpus=payload.num_vcpus,
+            memory_gib=payload.memory_gib,
+            os=payload.os,
+            power_state="OFF",
+            ip_address=None,
+        )
+
+    def set_vm_power(self, vm_ext_id: str, action: VmPowerActionType) -> Vm:
+        endpoint = {
+            "ON": "power-on",
+            "OFF": "power-off",
+            "RESTART": "reset",
+        }[action]
+        self._post(f"/api/vmm/v4.0/ahv/config/vms/{vm_ext_id}/$actions/{endpoint}")
+        data = self._get(f"/api/vmm/v4.0/ahv/config/vms/{vm_ext_id}")
+        item = data.get("data", {}) or {}
+        cluster = item.get("cluster", {}) or {}
+        project = item.get("project", {}) or {}
+        return Vm(
+            ext_id=vm_ext_id,
+            name=item.get("name", ""),
+            project_ext_id=project.get("extId", ""),
+            project_name=project.get("name", ""),
+            cluster_ext_id=cluster.get("extId", ""),
+            cluster_name=cluster.get("name", ""),
+            num_vcpus=int(item.get("numSockets", 1))
+            * int(item.get("numCoresPerSocket", 1)),
+            memory_gib=int(item.get("memorySizeBytes", 0)) // (1024**3),
+            os=item.get("guestOs", "unknown"),
+            power_state="ON" if item.get("powerState") == "ON" else "OFF",
+            ip_address=None,
+        )
+
+    def delete_vm(self, vm_ext_id: str) -> None:
+        self._delete(f"/api/vmm/v4.0/ahv/config/vms/{vm_ext_id}")

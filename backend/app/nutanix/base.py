@@ -3,6 +3,8 @@ from __future__ import annotations
 import abc
 
 from app.schemas.nutanix import (
+    Bucket,
+    BucketCreate,
     Cluster,
     FileServer,
     FileServerCreate,
@@ -10,6 +12,11 @@ from app.schemas.nutanix import (
     ObjectStoreCreate,
     Project,
     ProjectCreate,
+    Share,
+    ShareCreate,
+    Vm,
+    VmCreate,
+    VmPowerActionType,
 )
 
 
@@ -56,4 +63,42 @@ class NutanixClient(abc.ABC):
 
     @abc.abstractmethod
     def create_object_store(self, payload: ObjectStoreCreate) -> ObjectStore:
+        ...
+
+    # --- Phase 2: file shares ---
+
+    @abc.abstractmethod
+    def list_shares(self, file_server_ext_id: str) -> list[Share]:
+        ...
+
+    @abc.abstractmethod
+    def create_share(self, file_server_ext_id: str, payload: ShareCreate) -> Share:
+        ...
+
+    # --- Phase 2: object buckets ---
+
+    @abc.abstractmethod
+    def list_buckets(self, object_store_ext_id: str) -> list[Bucket]:
+        ...
+
+    @abc.abstractmethod
+    def create_bucket(self, object_store_ext_id: str, payload: BucketCreate) -> Bucket:
+        ...
+
+    # --- Phase 6: virtual machines ---
+
+    @abc.abstractmethod
+    def list_vms(self, project_ext_id: str | None = None) -> list[Vm]:
+        ...
+
+    @abc.abstractmethod
+    def create_vm(self, payload: VmCreate) -> Vm:
+        ...
+
+    @abc.abstractmethod
+    def set_vm_power(self, vm_ext_id: str, action: VmPowerActionType) -> Vm:
+        ...
+
+    @abc.abstractmethod
+    def delete_vm(self, vm_ext_id: str) -> None:
         ...
