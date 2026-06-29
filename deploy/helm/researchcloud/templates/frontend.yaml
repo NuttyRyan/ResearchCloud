@@ -17,6 +17,7 @@ spec:
         app.kubernetes.io/name: researchcloud
         app.kubernetes.io/component: frontend
     spec:
+      {{- include "researchcloud.imagePullSecrets" . | nindent 6 }}
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
@@ -27,7 +28,7 @@ spec:
               app.kubernetes.io/component: frontend
       containers:
         - name: frontend
-          image: "{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag }}"
+          image: "{{ include "researchcloud.image" (dict "image" .Values.frontend.image "global" .Values.global) }}"
           imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.frontend.port }}
@@ -62,8 +63,14 @@ metadata:
   name: researchcloud
   labels:
     {{- include "researchcloud.labels" . | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
+  {{- if .Values.ingress.className }}
   ingressClassName: {{ .Values.ingress.className }}
+  {{- end }}
   {{- if .Values.ingress.tls.enabled }}
   tls:
     - hosts:

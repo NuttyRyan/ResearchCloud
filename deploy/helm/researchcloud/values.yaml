@@ -1,5 +1,13 @@
 # Default values for the ResearchCloud Helm chart (Nutanix NKP).
 
+global:
+  # Container registry that hosts the images, e.g. "registry.nkp.example.com/researchcloud".
+  # Leave empty only if the images are already present on the nodes.
+  imageRegistry: ""
+
+# Pull secret(s) for a private registry, e.g. [ { name: regcred } ].
+imagePullSecrets: []
+
 # High availability: run multiple replicas of each tier.
 backend:
   image:
@@ -16,8 +24,9 @@ backend:
       cpu: 500m
       memory: 512Mi
   env:
+    # The app talks to Prism Central only on demand, so it boots fine without one.
+    # Set to "true" to run against the deterministic mock provider instead.
     RC_FORCE_MOCK_NUTANIX: "false"
-    RC_DATABASE_URL: "postgresql+psycopg://researchcloud:researchcloud@researchcloud-postgres:5432/researchcloud"
 
 frontend:
   image:
@@ -34,6 +43,29 @@ frontend:
       cpu: 200m
       memory: 128Mi
 
+# Bundled PostgreSQL (single instance) so the chart deploys out of the box.
+# For production HA, disable this and point externalDatabaseUrl at a managed/HA Postgres.
+postgres:
+  enabled: true
+  image: postgres:16-alpine
+  user: researchcloud
+  password: researchcloud
+  database: researchcloud
+  storage: 5Gi
+  # Empty uses the cluster's default StorageClass (NKP provisions one).
+  storageClassName: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# Used only when postgres.enabled=false (e.g. an external HA Postgres):
+# "postgresql+psycopg://user:pass@host:5432/dbname"
+externalDatabaseUrl: ""
+
 # Backend secrets (override these at install time / via a sealed secret).
 secrets:
   RC_SECRET_KEY: "change-me-in-production"
@@ -46,7 +78,11 @@ podDisruptionBudget:
 
 ingress:
   enabled: true
-  className: nginx
+  # NKP ships Traefik by default; set this to the IngressClass present in your cluster
+  # (e.g. "traefik", or "kommander-traefik"). Run `kubectl get ingressclass` to check.
+  # Leave empty to use the cluster's default IngressClass.
+  className: ""
+  annotations: {}
   host: researchcloud.example.com
   tls:
     enabled: false

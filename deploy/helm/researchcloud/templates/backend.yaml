@@ -17,6 +17,7 @@ spec:
         app.kubernetes.io/name: researchcloud
         app.kubernetes.io/component: backend
     spec:
+      {{- include "researchcloud.imagePullSecrets" . | nindent 6 }}
       # Spread replicas across nodes for availability on NKP.
       topologySpreadConstraints:
         - maxSkew: 1
@@ -26,9 +27,20 @@ spec:
             matchLabels:
               app.kubernetes.io/name: researchcloud
               app.kubernetes.io/component: backend
+      {{- if .Values.postgres.enabled }}
+      # Wait for the database to accept connections before the app starts, so the
+      # table-creation on startup does not crash-loop while Postgres is initializing.
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - "until nc -z researchcloud-postgres 5432; do echo waiting for postgres; sleep 2; done"
+      {{- end }}
       containers:
         - name: backend
-          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+          image: "{{ include "researchcloud.image" (dict "image" .Values.backend.image "global" .Values.global) }}"
           imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.backend.port }}
@@ -50,8 +62,9 @@ spec:
             httpGet:
               path: /api/health
               port: {{ .Values.backend.port }}
-            initialDelaySeconds: 10
+            initialDelaySeconds: 20
             periodSeconds: 20
+            failureThreshold: 6
           resources:
             {{- toYaml .Values.backend.resources | nindent 12 }}
 ---
@@ -80,6 +93,7 @@ type: Opaque
 stringData:
   RC_SECRET_KEY: {{ .Values.secrets.RC_SECRET_KEY | quote }}
   RC_ENCRYPTION_KEY: {{ .Values.secrets.RC_ENCRYPTION_KEY | quote }}
+  RC_DATABASE_URL: {{ include "researchcloud.databaseUrl" . | quote }}
 {{- if .Values.podDisruptionBudget.enabled }}
 ---
 apiVersion: policy/v1

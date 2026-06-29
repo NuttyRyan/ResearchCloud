@@ -84,4 +84,34 @@ helm template rc deploy/helm/researchcloud
 ```
 
 The chart runs two replicas of each tier with a PodDisruptionBudget and topology
-spread constraints for high availability.
+spread constraints for high availability, and bundles a PostgreSQL instance so it
+deploys out of the box.
+
+Before installing on NKP, set these so the cluster can actually run it:
+
+```bash
+# 1. Build and push the images to a registry your NKP nodes can reach.
+docker build -f deploy/docker/backend.Dockerfile  -t <registry>/researchcloud/backend:0.1.0 .
+docker build -f deploy/docker/frontend.Dockerfile -t <registry>/researchcloud/frontend:0.1.0 .
+docker push <registry>/researchcloud/backend:0.1.0
+docker push <registry>/researchcloud/frontend:0.1.0
+
+# 2. Install, pointing at your registry, pull secret, and IngressClass.
+#    NKP uses Traefik by default - check `kubectl get ingressclass`.
+helm install rc deploy/helm/researchcloud \
+  --namespace researchcloud --create-namespace \
+  --set global.imageRegistry=<registry> \
+  --set imagePullSecrets[0].name=<regcred> \
+  --set ingress.className=<your-ingressclass> \
+  --set ingress.host=researchcloud.<your-domain> \
+  --set secrets.RC_SECRET_KEY=<random-strong-secret>
+```
+
+For production HA, disable the bundled Postgres and use a managed/HA database:
+`--set postgres.enabled=false --set externalDatabaseUrl=postgresql+psycopg://user:pass@host:5432/db`.
+
+Common deploy failures: `ImagePullBackOff` (images not pushed / registry or pull
+secret unset), backend `CrashLoopBackOff` (database unreachable or
+`externalDatabaseUrl` unset when `postgres.enabled=false`), and an Ingress with no
+ADDRESS (`ingress.className` does not match an existing IngressClass). The chart's
+post-install NOTES print this checklist too.

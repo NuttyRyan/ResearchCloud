@@ -1,0 +1,33 @@
+ResearchCloud has been installed as release "{{ .Release.Name }}" in namespace "{{ .Release.Namespace }}".
+
+Checklist if pods are not Running:
+
+1. Images: ensure these are pushed to a registry your NKP nodes can reach, and that
+   global.imageRegistry / imagePullSecrets are set:
+     - {{ include "researchcloud.image" (dict "image" .Values.backend.image "global" .Values.global) }}
+     - {{ include "researchcloud.image" (dict "image" .Values.frontend.image "global" .Values.global) }}
+   Check: kubectl -n {{ .Release.Namespace }} get pods
+          kubectl -n {{ .Release.Namespace }} describe pod <pod>   # look for ImagePullBackOff
+
+2. Database:
+{{- if .Values.postgres.enabled }}
+   A bundled PostgreSQL is deployed (researchcloud-postgres). For production HA, set
+   postgres.enabled=false and externalDatabaseUrl to a managed/HA Postgres.
+{{- else }}
+   postgres.enabled=false: the backend uses externalDatabaseUrl. Confirm it is set and
+   reachable: {{ .Values.externalDatabaseUrl | default "<UNSET - backend will fail>" }}
+{{- end }}
+
+3. Ingress:
+{{- if .Values.ingress.enabled }}
+   Host: {{ .Values.ingress.host }} (IngressClass: {{ .Values.ingress.className | default "<cluster default>" }})
+   NKP uses Traefik by default. Verify your IngressClass exists:
+     kubectl get ingressclass
+   and set ingress.className accordingly if the Ingress has no ADDRESS.
+{{- else }}
+   Ingress disabled. Reach the UI via:
+     kubectl -n {{ .Release.Namespace }} port-forward svc/researchcloud-frontend 8080:80
+{{- end }}
+
+4. Logs:
+     kubectl -n {{ .Release.Namespace }} logs deploy/researchcloud-backend
