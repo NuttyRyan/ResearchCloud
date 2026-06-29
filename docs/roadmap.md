@@ -16,8 +16,8 @@ vertical slice; later phases build out the full feature set from the product vis
 
 ## Phase 2 - Storage + provisioning depth
 
-- [ ] Create file shares (select Files cluster, set permissions)
-- [ ] Create buckets in object stores
+- [x] Create file shares (select Files cluster, set permissions)
+- [x] Create buckets in object stores
 - [ ] Wire Terraform / Calm DSL provisioners for real create paths
 
 ## Phase 3 - Self-Service + consoles
@@ -57,11 +57,12 @@ and add a project-membership join table; the frontend gates routes/nav by role.
 Replicate the core Ronin "machines" experience: simple, project-scoped VM lifecycle
 with cost-saving controls, built on the Nutanix v4 `vmm` namespace.
 
-- [ ] VM inventory per project: list VMs with power state, size, owner, and cost.
-- [ ] VM lifecycle: create from a blueprint/template, power on/off/restart, resize
-      (vCPU/RAM), add/expand disks, and delete (v4 `vmm`).
-- [ ] Sizing presets (e.g. small / medium / large / GPU) to hide cloud complexity,
+- [x] VM inventory per project: list VMs with power state, size, project, and IP
+      (filterable by project).
+- [x] VM lifecycle: create, power on/off/restart, and delete (v4 `vmm`).
+- [x] Sizing presets (small / medium / large / GPU) to hide cloud complexity,
       mirroring Ronin's one-click machine creation.
+- [ ] Resize (vCPU/RAM) and add/expand disks.
 - [ ] Smart scheduling & idle auto-stop: scheduled power on/off and automatic stop of
       idle VMs to control spend (the cost hook is shared with Phase 7).
 - [ ] Per-project quotas (vCPU / memory / storage / VM count).
