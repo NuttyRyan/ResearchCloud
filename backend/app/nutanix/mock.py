@@ -14,6 +14,8 @@ from app.schemas.nutanix import (
     ObjectStoreCreate,
     Project,
     ProjectCreate,
+    ProjectUtilization,
+    ResourceUsage,
     Share,
     ShareCreate,
     SharePermission,
@@ -176,6 +178,28 @@ class MockNutanixClient(NutanixClient):
         )
         self._state.projects.append(project)
         return project
+
+    def list_project_utilization(self) -> list[ProjectUtilization]:
+        # Per-project quota limits (mock). Usage is derived from the project's VMs.
+        vcpu_limit, mem_limit, storage_limit = 64.0, 256.0, 4096.0
+        result: list[ProjectUtilization] = []
+        for project in self._state.projects:
+            pvms = [v for v in self._state.vms if v.project_ext_id == project.ext_id]
+            used_vcpu = float(sum(v.num_vcpus for v in pvms))
+            used_mem = float(sum(v.memory_gib for v in pvms))
+            used_storage = float(64 * len(pvms))
+            result.append(
+                ProjectUtilization(
+                    project_ext_id=project.ext_id,
+                    project_name=project.name,
+                    vcpus=ResourceUsage(used=used_vcpu, limit=vcpu_limit, unit="vCPU"),
+                    memory_gib=ResourceUsage(used=used_mem, limit=mem_limit, unit="GiB"),
+                    storage_gib=ResourceUsage(
+                        used=used_storage, limit=storage_limit, unit="GiB"
+                    ),
+                )
+            )
+        return result
 
     def list_file_servers(self) -> list[FileServer]:
         return list(self._state.file_servers)

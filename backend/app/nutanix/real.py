@@ -16,6 +16,8 @@ from app.schemas.nutanix import (
     ObjectStoreCreate,
     Project,
     ProjectCreate,
+    ProjectUtilization,
+    ResourceUsage,
     Share,
     ShareCreate,
     Vm,
@@ -185,6 +187,55 @@ class RealNutanixClient(NutanixClient):
             description=spec.get("description", payload.description),
             state="PENDING",
         )
+
+    def list_project_utilization(self) -> list[ProjectUtilization]:
+        # Quotas come from the v3 project resource_domain (best-effort; units vary
+        # by PC version - MEMORY/STORAGE are bytes, VCPUS a count).
+        data = self._post(
+            "/api/nutanix/v3/projects/list", {"kind": "project", "length": 250}
+        )
+        result: list[ProjectUtilization] = []
+        for item in data.get("entities", []) or []:
+            meta = item.get("metadata", {}) or {}
+            status = item.get("status", {}) or {}
+            resources = (
+                (status.get("resources", {}) or {}).get("resource_domain", {}) or {}
+            ).get("resources", []) or []
+
+            def _find(rtype: str) -> dict[str, Any]:
+                for r in resources:  # noqa: B023
+                    if r.get("resource_type") == rtype:
+                        return r
+                return {}
+
+            def _gib(value: float) -> float:
+                return round(float(value) / (1024**3), 1)
+
+            vcpu = _find("VCPUS")
+            mem = _find("MEMORY")
+            sto = _find("STORAGE")
+            result.append(
+                ProjectUtilization(
+                    project_ext_id=meta.get("uuid", ""),
+                    project_name=status.get("name", ""),
+                    vcpus=ResourceUsage(
+                        used=float(vcpu.get("value", 0)),
+                        limit=float(vcpu.get("limit", 0)),
+                        unit="vCPU",
+                    ),
+                    memory_gib=ResourceUsage(
+                        used=_gib(mem.get("value", 0)),
+                        limit=_gib(mem.get("limit", 0)),
+                        unit="GiB",
+                    ),
+                    storage_gib=ResourceUsage(
+                        used=_gib(sto.get("value", 0)),
+                        limit=_gib(sto.get("limit", 0)),
+                        unit="GiB",
+                    ),
+                )
+            )
+        return result
 
     def list_file_servers(self) -> list[FileServer]:
         data = self._get("/api/files/v4.0/config/file-servers")

@@ -25,6 +25,31 @@ class ProjectCreate(BaseModel):
     description: str = ""
 
 
+class ResourceUsage(BaseModel):
+    used: float
+    limit: float
+    unit: str
+
+
+class ProjectUtilization(BaseModel):
+    project_ext_id: str
+    project_name: str
+    vcpus: ResourceUsage
+    memory_gib: ResourceUsage
+    storage_gib: ResourceUsage
+
+
+class CostSummary(BaseModel):
+    """Cost usage summary - placeholder until NCM Cost Governance is integrated."""
+
+    available: bool = False
+    source: str = "NCM Cost Governance"
+    currency: str = "USD"
+    month_to_date: float | None = None
+    forecast: float | None = None
+    note: str = ""
+
+
 class FileServer(BaseModel):
     ext_id: str
     name: str
