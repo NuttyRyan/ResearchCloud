@@ -12,7 +12,7 @@ vertical slice; later phases build out the full feature set from the product vis
 - [x] Deploy Nutanix Files
 - [x] Deploy Nutanix Objects
 - [x] Nutanix-themed UI (purple `#7855fa`, charcoal, rounded typography)
-- [x] Docker images + Helm chart for Nutanix NKP (HA)
+- [x] Single-VM deploy: one bash script provisions a Debian VM (nginx + systemd, git-based)
 
 ## Phase 2 - Storage + provisioning depth
 

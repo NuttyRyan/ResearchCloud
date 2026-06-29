@@ -1,9 +1,9 @@
 # AGENTS.md
 
 ResearchCloud is a Nutanix services portal: a FastAPI backend (`backend/`) and a
-React + Vite frontend (`frontend/`), with deploy artifacts in `deploy/` and Terraform
-skeletons in `infra/`. See `README.md` and `docs/` for full setup, commands, and
-architecture.
+React + Vite frontend (`frontend/`), with a single-VM deploy script in `deploy/vm/`
+and Terraform skeletons in `infra/`. See `README.md` and `docs/` for full setup,
+commands, and architecture.
 
 ## Cursor Cloud specific instructions
 
@@ -28,5 +28,7 @@ Non-obvious notes:
   (`backend/researchcloud.db`) persists connections/users across restarts; tables and a
   seeded `admin`/`admin` dev login are created automatically on startup.
 - Backend config is environment-driven with the `RC_` prefix (see `backend/.env.example`).
-- `helm` and `terraform` are not part of the app dependencies and are not installed by
-  the update script; install them only when you need to lint/validate `deploy/` or `infra/`.
+- Production deploy is a single Debian VM via `deploy/vm/deploy.sh` (nginx + systemd,
+  SQLite by default); it is idempotent and safe to re-run after a `git pull`.
+- `terraform` is not an app dependency and is not installed by the update script; install
+  it only when validating the `infra/` skeletons.

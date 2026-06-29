@@ -31,6 +31,13 @@ FastAPI backend
 - `services/` - business logic (e.g. `connection_service.py`).
 - `api/` - FastAPI routers and dependencies.
 
+## Deployment
+
+ResearchCloud deploys onto a single Debian VM via `deploy/vm/deploy.sh` (git-based,
+no containers): the backend runs as a `systemd` service behind nginx, which also serves
+the built frontend and proxies `/api`. SQLite is used by default. See
+[`deploy/vm/README.md`](../deploy/vm/README.md).
+
 ## Nutanix client abstraction
 
 `NutanixClient` (in `nutanix/base.py`) defines the operations the app needs
