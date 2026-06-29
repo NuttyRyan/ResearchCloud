@@ -1,4 +1,7 @@
 import type {
+  AppSpec,
+  Blueprint,
+  BlueprintDetail,
   Bucket,
   Cluster,
   Connection,
@@ -7,6 +10,7 @@ import type {
   FileServer,
   ObjectStore,
   Project,
+  Runbook,
   Share,
   SharePermission,
   UserOut,
@@ -172,4 +176,45 @@ export const api = {
     }),
   deleteVm: (cid: number, vmExtId: string) =>
     request<void>(`/connections/${cid}/vms/${vmExtId}`, { method: 'DELETE' }),
+
+  // Self-service: blueprints & runbooks (app-level, not connection-scoped).
+  listBlueprints: () => request<Blueprint[]>('/blueprints'),
+  getBlueprint: (id: number) => request<BlueprintDetail>(`/blueprints/${id}`),
+  createBlueprint: (payload: {
+    name: string;
+    description: string;
+    os: string;
+    num_vcpus: number;
+    memory_gib: number;
+    apps: AppSpec[];
+  }) =>
+    request<BlueprintDetail>('/blueprints', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  deleteBlueprint: (id: number) =>
+    request<void>(`/blueprints/${id}`, { method: 'DELETE' }),
+  createRunbookFromBlueprint: (
+    id: number,
+    payload: { name: string; description: string },
+  ) =>
+    request<Runbook>(`/blueprints/${id}/runbook`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  listRunbooks: () => request<Runbook[]>('/runbooks'),
+  getRunbook: (id: number) => request<Runbook>(`/runbooks/${id}`),
+  createRunbook: (payload: {
+    name: string;
+    description: string;
+    os: string;
+    script: string;
+  }) =>
+    request<Runbook>('/runbooks', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  deleteRunbook: (id: number) =>
+    request<void>(`/runbooks/${id}`, { method: 'DELETE' }),
 };

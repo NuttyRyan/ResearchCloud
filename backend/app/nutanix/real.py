@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uuid
 from typing import Any
 
 import httpx
@@ -55,6 +56,26 @@ class RealNutanixClient(NutanixClient):
             headers={"Accept": "application/json"},
         )
 
+    @staticmethod
+    def _mutating_headers() -> dict[str, str]:
+        # v4 requires a fresh Ntnx-Request-Id (UUID) on POST/PUT/DELETE for
+        # idempotency; omitting it returns HTTP 400. Harmless for v3 endpoints.
+        return {
+            "Ntnx-Request-Id": str(uuid.uuid4()),
+            "Content-Type": "application/json",
+        }
+
+    @staticmethod
+    def _error(method: str, path: str, exc: httpx.HTTPError) -> NutanixError:
+        detail = str(exc)
+        resp = getattr(exc, "response", None)
+        if resp is not None:
+            body = (resp.text or "").strip()
+            detail = f"HTTP {resp.status_code}"
+            if body:
+                detail += f": {body[:1000]}"
+        return NutanixError(f"{method} {path} failed: {detail}")
+
     def _get(self, path: str, **kwargs: Any) -> dict[str, Any]:
         try:
             with self._client() as client:
@@ -62,24 +83,42 @@ class RealNutanixClient(NutanixClient):
                 resp.raise_for_status()
                 return resp.json()
         except httpx.HTTPError as exc:  # noqa: B904
-            raise NutanixError(f"GET {path} failed: {exc}") from exc
+            raise self._error("GET", path, exc) from exc
 
-    def _post(self, path: str, json: dict[str, Any] | None = None) -> dict[str, Any]:
+    def _post(
+        self,
+        path: str,
+        json: dict[str, Any] | None = None,
+        if_match: str | None = None,
+    ) -> dict[str, Any]:
+        headers = self._mutating_headers()
+        if if_match:
+            headers["If-Match"] = if_match
         try:
             with self._client() as client:
-                resp = client.post(path, json=json or {})
+                resp = client.post(path, json=json or {}, headers=headers)
                 resp.raise_for_status()
                 return resp.json() if resp.content else {}
         except httpx.HTTPError as exc:  # noqa: B904
-            raise NutanixError(f"POST {path} failed: {exc}") from exc
+            raise self._error("POST", path, exc) from exc
+
+    def _get_etag(self, path: str) -> str | None:
+        """GET a resource and return its ETag header (for If-Match on updates)."""
+        try:
+            with self._client() as client:
+                resp = client.get(path)
+                resp.raise_for_status()
+                return resp.headers.get("ETag")
+        except httpx.HTTPError as exc:  # noqa: B904
+            raise self._error("GET", path, exc) from exc
 
     def _delete(self, path: str) -> None:
         try:
             with self._client() as client:
-                resp = client.delete(path)
+                resp = client.delete(path, headers=self._mutating_headers())
                 resp.raise_for_status()
         except httpx.HTTPError as exc:  # noqa: B904
-            raise NutanixError(f"DELETE {path} failed: {exc}") from exc
+            raise self._error("DELETE", path, exc) from exc
 
     def test_connection(self) -> tuple[str, int]:
         clusters = self.list_clusters()
@@ -166,6 +205,7 @@ class RealNutanixClient(NutanixClient):
 
     def create_file_server(self, payload: FileServerCreate) -> FileServer:
         body = {
+            "$objectType": "files.v4.config.FileServer",
             "name": payload.name,
             "clusterExtId": payload.cluster_ext_id,
             "sizeInGib": payload.size_gib,
@@ -201,6 +241,7 @@ class RealNutanixClient(NutanixClient):
 
     def create_object_store(self, payload: ObjectStoreCreate) -> ObjectStore:
         body = {
+            "$objectType": "objects.v4.config.ObjectStore",
             "name": payload.name,
             "clusterExtId": payload.cluster_ext_id,
             "totalCapacityGiB": payload.capacity_gib,
@@ -239,6 +280,7 @@ class RealNutanixClient(NutanixClient):
 
     def create_share(self, file_server_ext_id: str, payload: ShareCreate) -> Share:
         body = {
+            "$objectType": "files.v4.config.Share",
             "name": payload.name,
             "protocol": payload.protocol,
             "maxSizeGib": payload.size_gib,
@@ -279,6 +321,7 @@ class RealNutanixClient(NutanixClient):
 
     def create_bucket(self, object_store_ext_id: str, payload: BucketCreate) -> Bucket:
         body = {
+            "$objectType": "objects.v4.config.Bucket",
             "name": payload.name,
             "versioningEnabled": payload.versioning,
             "maxSizeGib": payload.size_gib,
@@ -331,12 +374,12 @@ class RealNutanixClient(NutanixClient):
 
     def create_vm(self, payload: VmCreate) -> Vm:
         body = {
+            "$objectType": "vmm.v4.ahv.config.Vm",
             "name": payload.name,
             "numSockets": payload.num_vcpus,
             "numCoresPerSocket": 1,
             "memorySizeBytes": payload.memory_gib * (1024**3),
             "cluster": {"extId": payload.cluster_ext_id},
-            "project": {"extId": payload.project_ext_id},
         }
         data = self._post("/api/vmm/v4.0/ahv/config/vms", body)
         item = data.get("data", body)
@@ -360,8 +403,11 @@ class RealNutanixClient(NutanixClient):
             "OFF": "power-off",
             "RESTART": "reset",
         }[action]
-        self._post(f"/api/vmm/v4.0/ahv/config/vms/{vm_ext_id}/$actions/{endpoint}")
-        data = self._get(f"/api/vmm/v4.0/ahv/config/vms/{vm_ext_id}")
+        base = f"/api/vmm/v4.0/ahv/config/vms/{vm_ext_id}"
+        # v4 power actions need the current ETag via If-Match plus a request id.
+        etag = self._get_etag(base)
+        self._post(f"{base}/$actions/{endpoint}", if_match=etag)
+        data = self._get(base)
         item = data.get("data", {}) or {}
         cluster = item.get("cluster", {}) or {}
         project = item.get("project", {}) or {}

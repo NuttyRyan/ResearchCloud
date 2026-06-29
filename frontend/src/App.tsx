@@ -3,12 +3,14 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from './auth/AuthContext';
 import { AppLayout } from './components/AppLayout';
 import { ConnectionProvider } from './state/ConnectionContext';
+import { BlueprintsPage } from './pages/BlueprintsPage';
 import { ConnectionsPage } from './pages/ConnectionsPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { FilesPage } from './pages/FilesPage';
 import { LoginPage } from './pages/LoginPage';
 import { ObjectsPage } from './pages/ObjectsPage';
 import { ProjectsPage } from './pages/ProjectsPage';
+import { RunbooksPage } from './pages/RunbooksPage';
 import { VmsPage } from './pages/VmsPage';
 
 export default function App() {
@@ -38,6 +40,8 @@ export default function App() {
           <Route path="/connections" element={<ConnectionsPage />} />
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/vms" element={<VmsPage />} />
+          <Route path="/blueprints" element={<BlueprintsPage />} />
+          <Route path="/runbooks" element={<RunbooksPage />} />
           <Route path="/files" element={<FilesPage />} />
           <Route path="/objects" element={<ObjectsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />

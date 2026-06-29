@@ -95,6 +95,43 @@ export interface Bucket {
   state: string;
 }
 
+export type AppInstallMethod = 'URL' | 'INLINE';
+
+export interface AppSpec {
+  name: string;
+  method: AppInstallMethod;
+  url: string;
+  script: string;
+}
+
+export interface Blueprint {
+  id: number;
+  name: string;
+  description: string;
+  os: string;
+  num_vcpus: number;
+  memory_gib: number;
+  apps: AppSpec[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BlueprintDetail extends Blueprint {
+  install_script: string;
+  calm_dsl: string;
+  platform: 'linux' | 'windows';
+}
+
+export interface Runbook {
+  id: number;
+  name: string;
+  description: string;
+  os: string;
+  script: string;
+  source_blueprint_id: number | null;
+  created_at: string;
+}
+
 export type VmPowerState = 'ON' | 'OFF';
 export type VmPowerActionType = 'ON' | 'OFF' | 'RESTART';
 
