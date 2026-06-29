@@ -15,6 +15,7 @@ import {
 import { useDisclosure } from '@mantine/hooks';
 import {
   IconBox,
+  IconChecklist,
   IconCloud,
   IconDeviceDesktop,
   IconFolders,
@@ -22,6 +23,7 @@ import {
   IconLogout,
   IconPlugConnected,
   IconServer2,
+  IconStack2,
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { NavLink as RouterNavLink, Outlet, useLocation } from 'react-router-dom';
@@ -34,6 +36,8 @@ const NAV_ITEMS = [
   { to: '/connections', label: 'Prism Central', icon: IconPlugConnected },
   { to: '/projects', label: 'Projects', icon: IconFolders },
   { to: '/vms', label: 'Virtual Machines', icon: IconDeviceDesktop },
+  { to: '/blueprints', label: 'Blueprints', icon: IconStack2 },
+  { to: '/runbooks', label: 'Runbooks', icon: IconChecklist },
   { to: '/files', label: 'Files', icon: IconServer2 },
   { to: '/objects', label: 'Objects', icon: IconBox },
 ];

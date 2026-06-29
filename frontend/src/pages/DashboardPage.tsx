@@ -57,10 +57,10 @@ const DELIVERED = [
   'Deploy Nutanix Files & Objects',
   'File shares (with permissions) & object buckets',
   'VM management: create, power on/off/restart, delete',
+  'Self-Service blueprint builder & runbooks (Calm DSL)',
 ];
 
 const ROADMAP = [
-  'Self-Service blueprint builder & runbooks (Calm DSL)',
   'VNC console for project VMs',
   'Active Directory user & group management',
   'Flow microsegmentation management',
