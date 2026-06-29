@@ -63,6 +63,9 @@ const ROADMAP = [
   'VNC console for project VMs',
   'Active Directory user & group management',
   'Flow microsegmentation management',
+  'Admin & end-user (self-service) access modes',
+  'VM & workspace management (Ronin-style)',
+  'Cost management & governance (NCM Cost Governance)',
 ];
 
 export function DashboardPage() {
