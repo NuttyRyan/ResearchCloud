@@ -31,7 +31,7 @@ import {
   IconTrash,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api, ApiError } from '../api/client';
 import type { AppSpec } from '../api/types';
 
@@ -84,6 +84,11 @@ export function BlueprintsPage() {
     queryFn: () => api.getBlueprint(detailId!),
     enabled: detailId !== null,
   });
+
+  // Pre-fill a sensible runbook name when a blueprint's detail loads.
+  useEffect(() => {
+    if (detail) setRunbookName(`${detail.name}-setup`);
+  }, [detail]);
 
   const form = useForm({
     initialValues: {
