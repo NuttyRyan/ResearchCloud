@@ -51,6 +51,21 @@ the built frontend and proxies `/api`. SQLite is used by default. See
 `factory.get_client(connection)` returns the right client. Switching to live mode is
 a config change (`RC_FORCE_MOCK_NUTANIX=false`) plus valid stored credentials.
 
+### Live v4 request requirements
+
+The Nutanix v4 REST APIs require specifics that `RealNutanixClient` handles:
+
+- **`Ntnx-Request-Id`** (a fresh UUID) on every POST/PUT/DELETE for idempotency -
+  omitting it returns `400 BAD REQUEST`.
+- **`$objectType`** discriminator in create/update bodies (e.g. `vmm.v4.ahv.config.Vm`).
+- **`If-Match`** (resource ETag) on updates/actions such as VM power operations - the
+  client first GETs the resource to read its ETag.
+- Create calls are asynchronous (`202 ACCEPTED` returning a task); the new entity
+  appears on the next list refresh.
+
+On any live error the client surfaces the Nutanix response body so schema/permission
+issues are visible in the UI notification.
+
 ## Security
 
 - Auth is JWT bearer tokens (`/api/auth/login`). A dev admin is seeded on startup.
