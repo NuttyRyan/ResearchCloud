@@ -1,0 +1,53 @@
+# Default values for the ResearchCloud Helm chart (Nutanix NKP).
+
+# High availability: run multiple replicas of each tier.
+backend:
+  image:
+    repository: researchcloud/backend
+    tag: "0.1.0"
+    pullPolicy: IfNotPresent
+  replicas: 2
+  port: 8000
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  env:
+    RC_FORCE_MOCK_NUTANIX: "false"
+    RC_DATABASE_URL: "postgresql+psycopg://researchcloud:researchcloud@researchcloud-postgres:5432/researchcloud"
+
+frontend:
+  image:
+    repository: researchcloud/frontend
+    tag: "0.1.0"
+    pullPolicy: IfNotPresent
+  replicas: 2
+  port: 80
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+# Backend secrets (override these at install time / via a sealed secret).
+secrets:
+  RC_SECRET_KEY: "change-me-in-production"
+  RC_ENCRYPTION_KEY: ""
+
+# PodDisruptionBudget keeps at least one replica available during maintenance.
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+ingress:
+  enabled: true
+  className: nginx
+  host: researchcloud.example.com
+  tls:
+    enabled: false
+    secretName: researchcloud-tls

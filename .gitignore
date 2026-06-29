@@ -19,6 +19,12 @@ dist/
 .env.*
 !.env.example
 
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+
 # Editor / OS
 .DS_Store
 *.swp
