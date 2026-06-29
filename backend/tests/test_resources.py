@@ -101,6 +101,28 @@ def test_create_and_list_bucket(auth_client: TestClient, connection_id: int) -> 
     assert "results" in names
 
 
+def test_project_utilization(auth_client: TestClient, connection_id: int) -> None:
+    base = f"/api/connections/{connection_id}"
+    util = auth_client.get(f"{base}/projects/utilization")
+    assert util.status_code == 200, util.text
+    rows = util.json()
+    assert len(rows) >= 1
+    default = next(r for r in rows if r["project_name"] == "default")
+    # The seed VM (4 vCPU / 16 GiB) is in the default project.
+    assert default["vcpus"]["limit"] == 64
+    assert default["vcpus"]["used"] >= 4
+    assert default["memory_gib"]["used"] >= 16
+
+
+def test_cost_summary_placeholder(auth_client: TestClient, connection_id: int) -> None:
+    resp = auth_client.get(f"/api/connections/{connection_id}/cost/summary")
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["available"] is False
+    assert body["source"] == "NCM Cost Governance"
+    assert "NCM Cost Governance" in body["note"]
+
+
 def test_vm_lifecycle(auth_client: TestClient, connection_id: int) -> None:
     base = f"/api/connections/{connection_id}"
     cluster_ext_id = auth_client.get(f"{base}/clusters").json()[0]["ext_id"]

@@ -95,6 +95,29 @@ export interface Bucket {
   state: string;
 }
 
+export interface ResourceUsage {
+  used: number;
+  limit: number;
+  unit: string;
+}
+
+export interface ProjectUtilization {
+  project_ext_id: string;
+  project_name: string;
+  vcpus: ResourceUsage;
+  memory_gib: ResourceUsage;
+  storage_gib: ResourceUsage;
+}
+
+export interface CostSummary {
+  available: boolean;
+  source: string;
+  currency: string;
+  month_to_date: number | null;
+  forecast: number | null;
+  note: string;
+}
+
 export type AppInstallMethod = 'URL' | 'INLINE';
 
 export interface AppSpec {

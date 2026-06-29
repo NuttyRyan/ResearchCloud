@@ -7,9 +7,11 @@ import type {
   Connection,
   ConnectionCreate,
   ConnectionTestResult,
+  CostSummary,
   FileServer,
   ObjectStore,
   Project,
+  ProjectUtilization,
   Runbook,
   Share,
   SharePermission,
@@ -93,6 +95,10 @@ export const api = {
     request<Cluster[]>(`/connections/${cid}/clusters`),
 
   listProjects: (cid: number) => request<Project[]>(`/connections/${cid}/projects`),
+  getProjectUtilization: (cid: number) =>
+    request<ProjectUtilization[]>(`/connections/${cid}/projects/utilization`),
+  getCostSummary: (cid: number) =>
+    request<CostSummary>(`/connections/${cid}/cost/summary`),
   createProject: (cid: number, payload: { name: string; description: string }) =>
     request<Project>(`/connections/${cid}/projects`, {
       method: 'POST',

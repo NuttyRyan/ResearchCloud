@@ -8,12 +8,14 @@ from app.schemas.nutanix import (
     Bucket,
     BucketCreate,
     Cluster,
+    CostSummary,
     FileServer,
     FileServerCreate,
     ObjectStore,
     ObjectStoreCreate,
     Project,
     ProjectCreate,
+    ProjectUtilization,
     Share,
     ShareCreate,
     Vm,
@@ -54,6 +56,24 @@ def create_project(payload: ProjectCreate, client: NutanixDep) -> Project:
         return client.create_project(payload)
     except NutanixError as exc:
         raise _handle(exc) from exc
+
+
+@router.get("/projects/utilization", response_model=list[ProjectUtilization])
+def list_project_utilization(client: NutanixDep) -> list[ProjectUtilization]:
+    try:
+        return client.list_project_utilization()
+    except NutanixError as exc:
+        raise _handle(exc) from exc
+
+
+@router.get("/cost/summary", response_model=CostSummary)
+def cost_summary(client: NutanixDep) -> CostSummary:  # noqa: ARG001
+    # Placeholder until NCM Cost Governance (Phase 7) is integrated. The client
+    # dependency keeps the connection scoping for when a real CostClient lands.
+    return CostSummary(
+        available=False,
+        note="Cost data will be sourced from NCM Cost Governance (Phase 7).",
+    )
 
 
 @router.get("/files", response_model=list[FileServer])

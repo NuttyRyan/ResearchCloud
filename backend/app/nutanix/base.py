@@ -12,6 +12,7 @@ from app.schemas.nutanix import (
     ObjectStoreCreate,
     Project,
     ProjectCreate,
+    ProjectUtilization,
     Share,
     ShareCreate,
     Vm,
@@ -47,6 +48,10 @@ class NutanixClient(abc.ABC):
 
     @abc.abstractmethod
     def create_project(self, payload: ProjectCreate) -> Project:
+        ...
+
+    @abc.abstractmethod
+    def list_project_utilization(self) -> list[ProjectUtilization]:
         ...
 
     @abc.abstractmethod
